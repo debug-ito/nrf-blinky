@@ -1,7 +1,6 @@
 [package]
 authors = ["Toshio Ito <debug.ito@gmail.com>"]
 edition = "2018"
-readme = "README.md"
 name = "nrf-blinky"
 version = "0.1.0"
 
