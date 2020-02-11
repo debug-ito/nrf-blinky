@@ -25,11 +25,11 @@ fn main() -> ! {
     let pers = Peripherals::take().unwrap();
     let p0 = pers.P0.split();
     let mut led = p0.p0_07.into_open_drain_output(Disconnect0Standard1, Low);
-    const DELAY : u16 = 60000;
+    const DELAY : u16 = 20000;
     
     loop {
         led.set_high().unwrap();
-        delay(DELAY);
+        delay(3 * DELAY);
         led.set_low().unwrap();
         delay(DELAY);
     }
