@@ -10,11 +10,27 @@ extern crate panic_halt; // you can put a breakpoint on `rust_begin_unwind` to c
 use cortex_m::asm;
 use cortex_m_rt::entry;
 
+use nrf52840_pac::Peripherals;
+use nrf52840_hal::gpio::{GpioExt, OpenDrainConfig::Disconnect0Standard1, Level::Low};
+use embedded_hal::digital::v2::OutputPin;
+
+fn delay(count: u16) {
+    for _ in 0 .. count {
+        asm::nop();
+    }
+}
+
 #[entry]
 fn main() -> ! {
-    asm::nop(); // To not have main optimize to abort in release mode, remove when you add code
-
+    let pers = Peripherals::take().unwrap();
+    let p0 = pers.P0.split();
+    let mut led = p0.p0_07.into_open_drain_output(Disconnect0Standard1, Low);
+    const DELAY : u16 = 60000;
+    
     loop {
-        // your code goes here
+        led.set_high().unwrap();
+        delay(DELAY);
+        led.set_low().unwrap();
+        delay(DELAY);
     }
 }
