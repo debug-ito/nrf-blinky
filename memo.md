@@ -24,9 +24,12 @@ nRF SDKの examples/peripheral/timer を見てみるが、これも随分ハイ�
 で、その後`nrfx_timer_extended_compare`関数でcompare eventをクリアしてからtimer側のinterruptを有効化している。多分。
 
 priorityをセットしないといけないのか？
-
+セットしてみたけど、効果なし。
 
 Timer割り込みハンドラから直接LEDを触ろうともしたが、toggleさせるのが妙にめんどくさかったらいったん諦めた。
+
+Cargo.tomlではcortex-mにdevice featureを、PACにrt featureをいれているが、device featureを抜いてみた。
+効果なし。
 
 
 参考
