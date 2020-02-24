@@ -20,12 +20,14 @@ use nrf52840_hal::target::{
 };
 use nrf52840_hal::gpio::{
     GpioExt, OpenDrainConfig::*, Level::*,
+    p0::P0_07, Output, OpenDrain
 };
 use embedded_hal::digital::v2::OutputPin;
 
 
 static EV_TIMER0: Mutex<RefCell<Option<TIMER0_t>>> = Mutex::new(RefCell::new(None));
-static COUNTER: AtomicU8 = AtomicU8::new(0);
+// static COUNTER: AtomicU8 = AtomicU8::new(0);
+static LED_PIN: Mutex<RefCell<Option<P0_07<Output<OpenDrain>>>>> = Mutex::new(RefCell::new(None));
 
 // fn delay(count: u16) {
 //     for _ in 0 .. count {
@@ -73,28 +75,31 @@ fn TIMER0() {
         if let Some(timer0) = EV_TIMER0.borrow(&cs).borrow().as_ref() {
             let ev = &timer0.events_compare[0]; 
             if ev.read().events_compare().bit_is_set() {
-                let new_val =
-                    if COUNTER.load(Relaxed) == 0 {
-                        1
-                    } else {
-                        0
-                    };
-                COUNTER.store(new_val, Relaxed);
+                // let new_val =
+                //     if COUNTER.load(Relaxed) == 0 {
+                //         1
+                //     } else {
+                //         0
+                //     };
+                // COUNTER.store(new_val, Relaxed);
                 ev.write(|w| w.events_compare().clear_bit());
             }
+        }
+        if let Some(ref mut led) = LED_PIN.borrow(&cs).borrow_mut().as_mut() {
+            led.set_high().unwrap();
         }
     });
 }
 
-fn wait_change_counter(prev: &mut u8) {
-    loop {
-        let current = COUNTER.load(Relaxed);
-        if current != *prev {
-            *prev = current;
-            return;
-        }
-    }
-}
+// fn wait_change_counter(prev: &mut u8) {
+//     loop {
+//         let current = COUNTER.load(Relaxed);
+//         if current != *prev {
+//             *prev = current;
+//             return;
+//         }
+//     }
+// }
 
 #[entry]
 fn main() -> ! {
@@ -103,20 +108,29 @@ fn main() -> ! {
     let p0 = pers.P0.split();
     let timer0 = pers.TIMER0;
     let mut led = p0.p0_07.into_open_drain_output(Disconnect0Standard1, Low);
+    led.set_low().unwrap();
     // let mut prev_counter = 0;
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     start_timer0(&timer0);
     free(move |cs| {
         EV_TIMER0.borrow(&cs).replace(Some(timer0));
+        LED_PIN.borrow(&cs).replace(Some(led));
     });
+
+    // free(|cs| {
+    //     if let Some(ref mut led) = LED_PIN.borrow(&cs).borrow_mut().as_mut() {
+    //         led.set_low().unwrap();
+    //     }
+    // });
     
     loop {
-        if COUNTER.load(Relaxed) == 0 {
-            led.set_low().unwrap();
-        } else {
-            led.set_high().unwrap();
-        }
+        // if COUNTER.load(Relaxed) == 0 {
+        //     led.set_low().unwrap();
+        // } else {
+        //     led.set_high().unwrap();
+        // }
+        
         // led.set_high().unwrap();
         // wait_timer0(&pers.TIMER0);
         // wait_change_counter(&mut prev_counter);
