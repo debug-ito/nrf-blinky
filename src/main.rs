@@ -8,15 +8,20 @@ extern crate panic_halt; // you can put a breakpoint on `rust_begin_unwind` to c
 // extern crate panic_semihosting; // logs messages to the host stderr; requires a debugger
 
 use cortex_m::asm;
+use cortex_m::interrupt::{free, Mutex};
 use cortex_m_rt::entry;
 
+use nrf52840_pac::interrupt;
 use nrf52840_hal::target::{
-    Peripherals, TIMER0
+    timer0, Peripherals, TIMER0 as TIMER0_t
 };
 use nrf52840_hal::gpio::{
     GpioExt, OpenDrainConfig::*, Level::*,
 };
 use embedded_hal::digital::v2::OutputPin;
+
+
+static EV_TIMER0: Mutex<Option<timer0::EVENTS_COMPARE>> = Mutex::new(None);
 
 fn delay(count: u16) {
     for _ in 0 .. count {
@@ -24,7 +29,7 @@ fn delay(count: u16) {
     }
 }
 
-fn config_timer0(timer: &TIMER0, period_usec: u32) {
+fn config_timer0(timer: &TIMER0_t, period_usec: u32) {
     timer.mode.write(|w| w.mode().timer());
     timer.bitmode.write(|w| w.bitmode()._32bit());
     unsafe {
@@ -32,13 +37,14 @@ fn config_timer0(timer: &TIMER0, period_usec: u32) {
         timer.cc[0].write(|w| w.cc().bits(period_usec));
     }
     timer.shorts.write(|w| w.compare0_clear().enabled());
+    timer.intenset.write(|w| w.compare0().set_bit());
 }
 
-fn start_timer0(timer: &TIMER0) {
+fn start_timer0(timer: &TIMER0_t) {
     timer.tasks_start.write(|w| w.tasks_start().set_bit());
 }
 
-fn wait_timer0(timer: &TIMER0) {
+fn wait_timer0(timer: &TIMER0_t) {
     let ev = &timer.events_compare[0];
     loop {
         if ev.read().events_compare().bit_is_set() {
@@ -46,6 +52,17 @@ fn wait_timer0(timer: &TIMER0) {
             return;
         }
     }
+}
+
+#[interrupt]
+fn TIMER0() {
+    free(|cs| {
+        if let Some(ev) = EV_TIMER0.borrow(&cs) {
+            if ev.read().events_compare().bit_is_set() {
+                ev.write(|w| w.events_compare().clear_bit());
+            }
+        }
+    });
 }
 
 #[entry]
