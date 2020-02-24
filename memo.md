@@ -61,10 +61,28 @@ LSBはなんか別の意味があるんだっけ？
 だったらこれは正しそうな気がするんだが。
 でもTIMER0の中には大した内容がないような・・・？
 
+うーん、でもcortex-m-rtやnrf52840-pacの内容を見る限り、問題ないように思うんだけど。
 
-- interrupt handlerを数字で与える方法を試してみるか？
-- bootloaderが悪さしてないか？ nRFのtimer exampleをビルドして動くか？
+nRF5 SDKのexamples/peripheral/timerをマニュアル通りにSparkFunビルドに移植してブートローダーで書き込んだら一応Lチカはできてる。
+でもLチカの周期がなんかおかしいような。
+点灯時間と消灯時間がアンバランス。
+objdumpで中身を見たが、vector entry at 0x26060 = 0002652d で、0002652c <TIMER0_IRQHandler>.
+ちゃんと整合している気がする。
 
+nrf52-hal-commonのtimer実装を見たけど、`enable_interrupt`ではintensetをONにしてnvic.enableしている。
+
+nrf52840-halはデフォルトで"rt" featureが入っている気がする。
+で、-pacにも"rt" featureを入れる。
+するとcortex-m-rtには"device" featureが入るようになっている、はず。
+
+
+マジでさっぱり分からん。
+SysTick exceptionを使えないか試してみるか？
+NVICは関係ないけど。
+
+Cortex-Mの System Control Block (SCB)とかは？
+Vector Table Offset Registerとかあるんだけど？
+これ、SDKではファームウェアでセットしたりしてるのか？
 
 
 参考
