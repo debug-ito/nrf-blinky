@@ -1,3 +1,5 @@
+nrf-blinky.hex
+dfu-package.zip
 **/*.rs.bk
 .#*
 .gdb_history
