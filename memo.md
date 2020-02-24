@@ -31,6 +31,9 @@ Timer割り込みハンドラから直接LEDを触ろうともしたが、toggle
 Cargo.tomlではcortex-mにdevice featureを、PACにrt featureをいれているが、device featureを抜いてみた。
 効果なし。
 
+interrupt handlerを数字で与える方法を試してみるか？
+
+
 
 参考
 
