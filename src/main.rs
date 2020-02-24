@@ -7,6 +7,8 @@ extern crate panic_halt; // you can put a breakpoint on `rust_begin_unwind` to c
 // extern crate panic_itm; // logs messages over ITM; requires ITM support
 // extern crate panic_semihosting; // logs messages to the host stderr; requires a debugger
 
+extern crate nrf52840_hal;
+
 use core::cell::RefCell;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
 use cortex_m::asm;
@@ -14,10 +16,10 @@ use cortex_m::interrupt::{free, Mutex};
 use cortex_m::peripheral::NVIC;
 use cortex_m_rt::entry;
 
-use nrf52840_pac::interrupt; // for [interrupt] attribute?
+// use nrf52840_pac::interrupt; // for [interrupt] attribute?
 
 use nrf52840_hal::target::{
-    Peripherals, TIMER0 as TIMER0_t
+    interrupt, Peripherals, TIMER0 as TIMER0_t
 };
 use nrf52840_hal::gpio::{
     GpioExt, OpenDrainConfig::*, Level::*,

@@ -11,6 +11,7 @@ panic-halt = "0.2.0"
 
 embedded-hal = "0.2.3"
 nrf52840-hal = "0.8.1"
+cortex-m-rt = "0.6.10"
 
 # Uncomment for the panic example.
 # panic-itm = "0.4.1"
@@ -18,13 +19,13 @@ nrf52840-hal = "0.8.1"
 # Uncomment for the allocator example.
 # alloc-cortex-m = "0.3.5"
 
-[dependencies.cortex-m-rt]
-features = ["device"]
-version = "0.6.10"
-
-[dependencies.nrf52840-pac]
-features = ["rt"]
-version = "0.8.0"
+## [dependencies.cortex-m-rt]
+## features = ["device"]
+## version = "0.6.10"
+## 
+## [dependencies.nrf52840-pac]
+## features = ["rt"]
+## version = "0.8.0"
 
 # Uncomment for the device example.
 # Update `memory.x`, set target to `thumbv7em-none-eabihf` in `.cargo/config`,
