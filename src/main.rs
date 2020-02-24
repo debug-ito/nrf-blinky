@@ -43,7 +43,10 @@ fn config_timer0(timer: &TIMER0_t, period_usec: u32) {
     timer.shorts.write(|w| w.compare0_clear().enabled());
     timer.intenset.write(|w| w.compare0().set_bit());
     // nvic.enable(nrf52840_hal::target::Interrupt::TIMER0);
-    unsafe { NVIC::unmask(nrf52840_hal::target::Interrupt::TIMER0); }
+    unsafe {
+        NVIC::unmask(nrf52840_hal::target::Interrupt::TIMER0);
+    }
+    NVIC::unpend(nrf52840_hal::target::Interrupt::TIMER0);
 }
 
 fn start_timer0(timer: &TIMER0_t) {
