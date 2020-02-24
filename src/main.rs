@@ -47,8 +47,8 @@ fn config_timer0(timer: &TIMER0_t, nvic: &mut NVIC, period_usec: u32) {
     const INT: nrf52840_hal::target::Interrupt = nrf52840_hal::target::Interrupt::TIMER0;
     // nvic.enable(nrf52840_hal::target::Interrupt::TIMER0);
     unsafe {
-        NVIC::unmask(INT);
         nvic.set_priority(INT, 1);
+        NVIC::unmask(INT);
     }
     NVIC::unpend(INT);
 }
