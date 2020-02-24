@@ -9,6 +9,7 @@ extern crate panic_halt; // you can put a breakpoint on `rust_begin_unwind` to c
 
 use core::cell::RefCell;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
+use cortex_m::asm;
 use cortex_m::interrupt::{free, Mutex};
 use cortex_m::peripheral::NVIC;
 use cortex_m_rt::entry;
@@ -71,6 +72,8 @@ fn wait_timer0(timer: &TIMER0_t) {
 
 #[interrupt]
 fn TIMER0() {
+    asm::nop();
+    asm::nop();
     free(|cs| {
         if let Some(timer0) = EV_TIMER0.borrow(&cs).borrow().as_ref() {
             let ev = &timer0.events_compare[0]; 
@@ -125,6 +128,8 @@ fn main() -> ! {
     // });
     
     loop {
+        asm::wfi();
+        
         // if COUNTER.load(Relaxed) == 0 {
         //     led.set_low().unwrap();
         // } else {
