@@ -33,7 +33,7 @@ static COUNTER: AtomicU8 = AtomicU8::new(0);
 //     }
 // }
 
-fn config_timer0(timer: &TIMER0_t, period_usec: u32) {
+fn config_timer0(timer: &TIMER0_t, nvic: &mut NVIC, period_usec: u32) {
     timer.mode.write(|w| w.mode().timer());
     timer.bitmode.write(|w| w.bitmode()._32bit());
     unsafe {
@@ -42,11 +42,15 @@ fn config_timer0(timer: &TIMER0_t, period_usec: u32) {
     }
     timer.shorts.write(|w| w.compare0_clear().enabled());
     timer.intenset.write(|w| w.compare0().set_bit());
+    timer.events_compare[0].write(|w| w.events_compare().clear_bit());
+
+    const INT: nrf52840_hal::target::Interrupt = nrf52840_hal::target::Interrupt::TIMER0;
     // nvic.enable(nrf52840_hal::target::Interrupt::TIMER0);
     unsafe {
-        NVIC::unmask(nrf52840_hal::target::Interrupt::TIMER0);
+        NVIC::unmask(INT);
+        nvic.set_priority(INT, 1);
     }
-    NVIC::unpend(nrf52840_hal::target::Interrupt::TIMER0);
+    NVIC::unpend(INT);
 }
 
 fn start_timer0(timer: &TIMER0_t) {
@@ -94,13 +98,14 @@ fn wait_change_counter(prev: &mut u8) {
 
 #[entry]
 fn main() -> ! {
+    let mut cpers = cortex_m::peripheral::Peripherals::take().unwrap();
     let pers = Peripherals::take().unwrap();
     let p0 = pers.P0.split();
     let timer0 = pers.TIMER0;
     let mut led = p0.p0_07.into_open_drain_output(Disconnect0Standard1, Low);
     // let mut prev_counter = 0;
     
-    config_timer0(&timer0, 5_000_000);
+    config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     start_timer0(&timer0);
     free(move |cs| {
         EV_TIMER0.borrow(&cs).replace(Some(timer0));
