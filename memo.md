@@ -8,7 +8,10 @@ Cortex-MのVTOR(Vector Table Offset Register)とブートローダについて�
 あれ、もしかしてブートローダーが割り込みをグローバルに無効化している？？
 
 と思ったけど、`cm_interrupt::enable()`呼んでもダメだった。
-
+マジ？
+PRIMASKの状態は`cortex_m::register`以下で読めそう。
+あとVTORの値も気になる。
+VTORをちゃんと書き換えればうまくいかないかなあ。
 
 
 
