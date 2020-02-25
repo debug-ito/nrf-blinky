@@ -1,4 +1,17 @@
 
+# 2020-02-25
+
+http://kevincuzner.com/2018/11/13/bootloader-for-arm-cortex-m0-no-vtor/
+
+Cortex-MのVTOR(Vector Table Offset Register)とブートローダについての記事。
+
+あれ、もしかしてブートローダーが割り込みをグローバルに無効化している？？
+
+と思ったけど、`cm_interrupt::enable()`呼んでもダメだった。
+
+
+
+
 # 2020-02-24
 
 interrupt handlerをセットするのが意外とややこしい。

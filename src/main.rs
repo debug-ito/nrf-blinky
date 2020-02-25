@@ -12,7 +12,7 @@ extern crate nrf52840_hal;
 use core::cell::RefCell;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
 use cortex_m::asm;
-use cortex_m::interrupt::{free, Mutex};
+use cortex_m::interrupt::{self as cm_interrupt, Mutex};
 use cortex_m::peripheral::NVIC;
 use cortex_m_rt::entry;
 
@@ -76,7 +76,7 @@ fn wait_timer0(timer: &TIMER0_t) {
 fn TIMER0() {
     asm::nop();
     asm::nop();
-    free(|cs| {
+    cm_interrupt::free(|cs| {
         if let Some(timer0) = EV_TIMER0.borrow(&cs).borrow().as_ref() {
             let ev = &timer0.events_compare[0]; 
             if ev.read().events_compare().bit_is_set() {
@@ -118,17 +118,20 @@ fn main() -> ! {
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     start_timer0(&timer0);
-    free(move |cs| {
+
+    cm_interrupt::free(move |cs| {
         EV_TIMER0.borrow(&cs).replace(Some(timer0));
         LED_PIN.borrow(&cs).replace(Some(led));
     });
-
-    // free(|cs| {
+    
+    // cm_interrupt::free(|cs| {
     //     if let Some(ref mut led) = LED_PIN.borrow(&cs).borrow_mut().as_mut() {
     //         led.set_low().unwrap();
     //     }
     // });
-    
+
+    unsafe { cm_interrupt::enable(); }
+
     loop {
         asm::wfi();
         
