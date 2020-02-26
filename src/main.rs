@@ -134,6 +134,17 @@ fn write_vtor(cpers: &CorePeripherals, vector_offset: u32) {
     });
 }
 
+fn get_vector_address() -> u32 {
+    unsafe {
+        extern "C" {
+            // Provided by the linker script.
+            // The end address of RESET entry in the vector table.
+            static __reset_vector: u32;
+        }
+        return ((&__reset_vector as *const u32) as u32) - 8;
+    }
+}
+
 #[entry]
 fn main() -> ! {
     let mut cpers = CorePeripherals::take().unwrap();
@@ -146,8 +157,8 @@ fn main() -> ! {
 
     // assert_blink(primask::read().is_active(), &mut led);
     // assert_blink(read_vtor(&cpers) == 0, &mut led);
-    
-    write_vtor(&cpers, 0x26000);
+
+    write_vtor(&cpers, get_vector_address());
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     start_timer0(&timer0);
