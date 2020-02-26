@@ -31,8 +31,8 @@ use embedded_hal::digital::v2::OutputPin;
 
 
 static EV_TIMER0: Mutex<RefCell<Option<TIMER0_t>>> = Mutex::new(RefCell::new(None));
-// static COUNTER: AtomicU8 = AtomicU8::new(0);
-static LED_PIN: Mutex<RefCell<Option<P0_07<Output<OpenDrain>>>>> = Mutex::new(RefCell::new(None));
+static COUNTER: AtomicU8 = AtomicU8::new(0);
+// static LED_PIN: Mutex<RefCell<Option<P0_07<Output<OpenDrain>>>>> = Mutex::new(RefCell::new(None));
 
 fn delay(count: u16) {
     for _ in 0 .. count {
@@ -98,19 +98,19 @@ fn TIMER0() {
         if let Some(timer0) = EV_TIMER0.borrow(&cs).borrow().as_ref() {
             let ev = &timer0.events_compare[0]; 
             if ev.read().events_compare().bit_is_set() {
-                // let new_val =
-                //     if COUNTER.load(Relaxed) == 0 {
-                //         1
-                //     } else {
-                //         0
-                //     };
-                // COUNTER.store(new_val, Relaxed);
+                let new_val =
+                    if COUNTER.load(Relaxed) == 0 {
+                        1
+                    } else {
+                        0
+                    };
+                COUNTER.store(new_val, Relaxed);
                 ev.write(|w| w.events_compare().clear_bit());
             }
         }
-        if let Some(ref mut led) = LED_PIN.borrow(&cs).borrow_mut().as_mut() {
-            led.set_high().unwrap();
-        }
+        // if let Some(ref mut led) = LED_PIN.borrow(&cs).borrow_mut().as_mut() {
+        //     led.set_high().unwrap();
+        // }
     });
 }
 
@@ -154,7 +154,7 @@ fn main() -> ! {
 
     cm_interrupt::free(move |cs| {
         EV_TIMER0.borrow(&cs).replace(Some(timer0));
-        LED_PIN.borrow(&cs).replace(Some(led));
+        // LED_PIN.borrow(&cs).replace(Some(led));
     });
     
     // cm_interrupt::free(|cs| {
@@ -168,11 +168,11 @@ fn main() -> ! {
     loop {
         asm::wfi();
         
-        // if COUNTER.load(Relaxed) == 0 {
-        //     led.set_low().unwrap();
-        // } else {
-        //     led.set_high().unwrap();
-        // }
+        if COUNTER.load(Relaxed) == 0 {
+            led.set_low().unwrap();
+        } else {
+            led.set_high().unwrap();
+        }
         
         // led.set_high().unwrap();
         // wait_timer0(&pers.TIMER0);
