@@ -11,6 +11,7 @@ extern crate nrf52840_hal;
 
 use core::cell::RefCell;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
+use cortex_m::Peripherals as CorePeripherals;
 use cortex_m::register::primask;
 use cortex_m::asm;
 use cortex_m::interrupt::{self as cm_interrupt, Mutex};
@@ -123,9 +124,13 @@ fn TIMER0() {
 //     }
 // }
 
+fn read_vtor(cpers: &CorePeripherals) -> u32 {
+    return cpers.SCB.vtor.read();
+}
+
 #[entry]
 fn main() -> ! {
-    let mut cpers = cortex_m::peripheral::Peripherals::take().unwrap();
+    let mut cpers = CorePeripherals::take().unwrap();
     let pers = Peripherals::take().unwrap();
     let p0 = pers.P0.split();
     let timer0 = pers.TIMER0;
@@ -133,7 +138,8 @@ fn main() -> ! {
     led.set_low().unwrap();
     // let mut prev_counter = 0;
 
-    assert_blink(primask::read().is_active(), &mut led);
+    // assert_blink(primask::read().is_active(), &mut led);
+    assert_blink(read_vtor(&cpers) == 0, &mut led);
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     start_timer0(&timer0);

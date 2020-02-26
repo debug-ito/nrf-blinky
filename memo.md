@@ -4,7 +4,7 @@
 `assert_blink`関数を作ってちょっと内部状態を調べてみた。
 
 - PRIMASKは`interrupt::enable`するまでもなくActiveになっている。(つまりマスクされていない。ゼロ。)
-
+- VTORは0になってる！
 
 
 # 2020-02-25
