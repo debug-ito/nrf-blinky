@@ -32,11 +32,27 @@ static EV_TIMER0: Mutex<RefCell<Option<TIMER0_t>>> = Mutex::new(RefCell::new(Non
 // static COUNTER: AtomicU8 = AtomicU8::new(0);
 static LED_PIN: Mutex<RefCell<Option<P0_07<Output<OpenDrain>>>>> = Mutex::new(RefCell::new(None));
 
-// fn delay(count: u16) {
-//     for _ in 0 .. count {
-//         asm::nop();
-//     }
-// }
+fn delay(count: u16) {
+    for _ in 0 .. count {
+        asm::nop();
+    }
+}
+
+fn assert_blink<T>(assertion: bool, led: &mut T) -> !
+    where T: OutputPin,
+          T::Error: core::fmt::Debug
+{
+    const DELAY: u16 = 20000;
+
+    loop {
+        led.set_high().unwrap();
+        delay(DELAY);
+        if !assertion {
+            led.set_low().unwrap();
+        }
+        delay(DELAY * 3);
+    }
+}
 
 fn config_timer0(timer: &TIMER0_t, nvic: &mut NVIC, period_usec: u32) {
     timer.mode.write(|w| w.mode().timer());
@@ -115,6 +131,8 @@ fn main() -> ! {
     let mut led = p0.p0_07.into_open_drain_output(Disconnect0Standard1, Low);
     led.set_low().unwrap();
     // let mut prev_counter = 0;
+
+    assert_blink(false, &mut led);
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     start_timer0(&timer0);
