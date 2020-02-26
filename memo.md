@@ -1,4 +1,12 @@
 
+# 2020-02-26
+
+`assert_blink`関数を作ってちょっと内部状態を調べてみた。
+
+- PRIMASKは`interrupt::enable`するまでもなくActiveになっている。(つまりマスクされていない。ゼロ。)
+
+
+
 # 2020-02-25
 
 http://kevincuzner.com/2018/11/13/bootloader-for-arm-cortex-m0-no-vtor/

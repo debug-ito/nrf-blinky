@@ -11,6 +11,7 @@ extern crate nrf52840_hal;
 
 use core::cell::RefCell;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
+use cortex_m::register::primask;
 use cortex_m::asm;
 use cortex_m::interrupt::{self as cm_interrupt, Mutex};
 use cortex_m::peripheral::NVIC;
@@ -132,7 +133,7 @@ fn main() -> ! {
     led.set_low().unwrap();
     // let mut prev_counter = 0;
 
-    assert_blink(false, &mut led);
+    assert_blink(primask::read().is_active(), &mut led);
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     start_timer0(&timer0);
