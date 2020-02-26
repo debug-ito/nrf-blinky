@@ -128,6 +128,12 @@ fn read_vtor(cpers: &CorePeripherals) -> u32 {
     return cpers.SCB.vtor.read();
 }
 
+fn write_vtor(cpers: &CorePeripherals, vector_offset: u32) {
+    cm_interrupt::free(|_| {
+        unsafe { cpers.SCB.vtor.write(vector_offset); }
+    });
+}
+
 #[entry]
 fn main() -> ! {
     let mut cpers = CorePeripherals::take().unwrap();
@@ -139,7 +145,9 @@ fn main() -> ! {
     // let mut prev_counter = 0;
 
     // assert_blink(primask::read().is_active(), &mut led);
-    assert_blink(read_vtor(&cpers) == 0, &mut led);
+    // assert_blink(read_vtor(&cpers) == 0, &mut led);
+    
+    write_vtor(&cpers, 0x26000);
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     start_timer0(&timer0);
