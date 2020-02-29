@@ -11,6 +11,7 @@ extern crate nrf52840_hal;
 
 use core::ops::Deref;
 use core::cell::RefCell;
+use core::cell::Ref;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
 use cortex_m::Peripherals as CorePeripherals;
 use cortex_m::register::primask;
@@ -96,7 +97,7 @@ fn TIMER0() {
     asm::nop();
     asm::nop();
     cm_interrupt::free(|cs| {
-        if let Some(timer0) = EV_TIMER0.borrow(&cs).borrow().as_ref() {
+        if let Some(timer0) = get_from_mutex(&EV_TIMER0, &cs) {
             let ev = &timer0.events_compare[0]; 
             if ev.read().events_compare().bit_is_set() {
                 let new_val =
@@ -146,16 +147,19 @@ fn get_vector_address() -> u32 {
     }
 }
 
-fn get_from_mutex<'a, T>(m: &'a Mutex<RefCell<Option<T>>>, cs: &'a CriticalSection) -> Option<&'a T> {
-    // return m.borrow(cs).borrow().as_ref();
+fn takeout<T>(o: &Option<T>) -> &T {
+    match o {
+        Some(t) => return t,
+        None => panic!("This is not expected."),
+    }
+}
 
-    // match m.borrow(cs).borrow().deref() {
-    //     Some(t) => return Some(&t),
-    //     None => return None
-    // };
-
-    // やっぱりRefのlifetimeで結果のreferenceのlifetimeも決まってしまう。
-    // Ref::mapをうまく使えばOption<Ref<T>>にすることはできるのでは？
+fn get_from_mutex<'a, T>(m: &'a Mutex<RefCell<Option<T>>>, cs: &'a CriticalSection) -> Option<Ref<'a, T>> {
+    let r = m.borrow(cs).borrow();
+    match r.deref() {
+        Some(_) => return Some(Ref::map(r, takeout)),
+        None => return None,
+    };
 }
 
 #[entry]
