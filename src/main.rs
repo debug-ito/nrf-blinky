@@ -9,12 +9,13 @@ extern crate panic_halt; // you can put a breakpoint on `rust_begin_unwind` to c
 
 extern crate nrf52840_hal;
 
+use core::ops::Deref;
 use core::cell::RefCell;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
 use cortex_m::Peripherals as CorePeripherals;
 use cortex_m::register::primask;
 use cortex_m::asm;
-use cortex_m::interrupt::{self as cm_interrupt, Mutex};
+use cortex_m::interrupt::{self as cm_interrupt, Mutex, CriticalSection};
 use cortex_m::peripheral::NVIC;
 use cortex_m_rt::entry;
 
@@ -143,6 +144,18 @@ fn get_vector_address() -> u32 {
         }
         return ((&__reset_vector as *const u32) as u32) - 8;
     }
+}
+
+fn get_from_mutex<'a, T>(m: &'a Mutex<RefCell<Option<T>>>, cs: &'a CriticalSection) -> Option<&'a T> {
+    // return m.borrow(cs).borrow().as_ref();
+
+    // match m.borrow(cs).borrow().deref() {
+    //     Some(t) => return Some(&t),
+    //     None => return None
+    // };
+
+    // やっぱりRefのlifetimeで結果のreferenceのlifetimeも決まってしまう。
+    // Ref::mapをうまく使えばOption<Ref<T>>にすることはできるのでは？
 }
 
 #[entry]
