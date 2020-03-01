@@ -67,21 +67,22 @@ static HANDLER: [Mutex<RefCell<Option<InputHandler>>>; CHAN_NUM] =
         Mutex::new(RefCell::new(None)),
     ];
 
-
-pub fn to_channels(dev: GPIOTE_t) -> Channels {
-    cinterrupt::free(|cs| {
-        DEVICE.borrow(&cs).replace(Some(dev));
-    });
-    return Channels {
-        chan0: ChanUninit { chan: 0 },
-        chan1: ChanUninit { chan: 1 },
-        chan2: ChanUninit { chan: 2 },
-        chan3: ChanUninit { chan: 3 },
-        chan4: ChanUninit { chan: 4 },
-        chan5: ChanUninit { chan: 5 },
-        chan6: ChanUninit { chan: 6 },
-        chan7: ChanUninit { chan: 7 },
-    };
+impl Channels {
+    pub fn from_device(dev: GPIOTE_t) -> Channels {
+        cinterrupt::free(|cs| {
+            DEVICE.borrow(&cs).replace(Some(dev));
+        });
+        return Channels {
+            chan0: ChanUninit { chan: 0 },
+            chan1: ChanUninit { chan: 1 },
+            chan2: ChanUninit { chan: 2 },
+            chan3: ChanUninit { chan: 3 },
+            chan4: ChanUninit { chan: 4 },
+            chan5: ChanUninit { chan: 5 },
+            chan6: ChanUninit { chan: 6 },
+            chan7: ChanUninit { chan: 7 },
+        };
+    }
 }
 
 #[interrupt]

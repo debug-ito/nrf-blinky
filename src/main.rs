@@ -30,12 +30,11 @@ use serde_cbor::ser::{SliceWrite, Serializer};
 use nrf52840_hal::target::{
     interrupt, Interrupt,
     Peripherals, TIMER0 as TIMER0_t,
-    GPIOTE as GPIOTE_t,
     UART0 as UART0_t
 };
 
 use crate::util::get_from_mutex;
-use crate::gpiote::{to_channels, ConfigIn, ConfigOut};
+use crate::gpiote::{Channels, ConfigIn, ConfigOut};
 
 #[derive(Serialize)]
 struct MonitorPack {
@@ -45,7 +44,6 @@ struct MonitorPack {
 static EV_TIMER0: Mutex<RefCell<Option<TIMER0_t>>> = Mutex::new(RefCell::new(None));
 static COUNTER: AtomicU8 = AtomicU8::new(0);
 // static LED_PIN: Mutex<RefCell<Option<P0_07<Output<OpenDrain>>>>> = Mutex::new(RefCell::new(None));
-static DEV_GPIOTE: Mutex<RefCell<Option<GPIOTE_t>>> = Mutex::new(RefCell::new(None));
 
 fn delay(count: u16) {
     for _ in 0 .. count {
@@ -218,7 +216,7 @@ fn main() -> ! {
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     // start_timer0(&timer0);
 
-    let gpio_chans = to_channels(pers.GPIOTE);
+    let gpio_chans = Channels::from_device(pers.GPIOTE);
     let _ = gpio_chans.chan0.into_input(ConfigIn {
         port: 0, pin: 13, handler: || { toggle_atomic(&COUNTER); }
     });
