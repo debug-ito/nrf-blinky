@@ -8,6 +8,31 @@ singleton moduleでデバイスオブジェクトをconsumeして、引き換え
 そうすればデバイスオブジェクトがstatic Mutex内に入っていることをruntimeで保証できる。
 
 
+UARTによる出力を考える。
+デバイスはそんなに難しくない。
+`EVENTS_TXDRDY`を見ながらTXDに書き込み続ければOK。
+
+`println!`なんかでお手軽に使うにはどうするか？
+
+とりあえず`core::fmt::Write` traitを実装するのが第1歩らしい。
+`write_str`メソッドだけ実装すればいい。
+
+uprintln! - Discovery
+https://docs.rust-embedded.org/discovery/11-usart/uprintln.html
+
+ここではuprintlnマクロを自分で書いているけど、
+`write!`, `writeln!`マクロは普通に使えるらしい。`core::fmt::Write`と一緒に使えばOK。多分。
+
+
+UARTデバイスのマニュアルを読む。
+
+- PSEL.{RTS, TXD, CTS, RXD}でピンを選択
+- ENABLEレジスターでUART機能を有効化
+- UARTEとは併用できない。
+- 受信時エラーはEVENTS_ERRORで報告される
+  
+
+
 
 # 2020-02-29
 

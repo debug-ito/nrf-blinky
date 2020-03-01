@@ -25,7 +25,8 @@ use cortex_m_rt::entry;
 use nrf52840_hal::target::{
     interrupt, Interrupt,
     Peripherals, TIMER0 as TIMER0_t,
-    GPIOTE as GPIOTE_t
+    GPIOTE as GPIOTE_t,
+    UART0 as UART0_t
 };
 use nrf52840_hal::gpio::{
     GpioExt, OpenDrainConfig::*, Level::*,
@@ -200,6 +201,43 @@ fn GPIOTE() {
             }
         }
     });
+}
+
+fn config_uart(uart: &UART0_t) {
+    uart.config.write(|w| {
+        return w.hwfc().disabled()
+            .parity().excluded();
+    });
+    uart.psel.txd.write(|w| {
+        unsafe {
+            return w.port().bit(false)
+                .pin().bits(4)
+                .connect().connected();
+        }
+    });
+    uart.psel.rxd.write(|w| {
+        unsafe {
+            return w.port().bit(false)
+                .pin().bits(5)
+                .connect().connected();
+        }
+    });
+    uart.baudrate.write(|w| {
+        return w.baudrate().baud115200();
+    });
+    uart.enable.write(|w| w.enable().enabled());
+}
+
+fn write_uart(uart: &UART0_t, data: &[u8]) {
+    uart.events_txdrdy.write(|w| w.events_txdrdy().clear_bit());
+    uart.tasks_starttx.write(|w| w.tasks_starttx().set_bit());
+    for datum in data {
+        uart.txd.write(|w| unsafe { return w.txd().bits(*datum); });
+        while !uart.events_txdrdy.read().events_txdrdy().bit_is_set() {
+            ;
+        }
+    }
+    uart.tasks_stoptx.write(|w| w.tasks_stoptx().set_bit());
 }
 
 #[entry]
