@@ -13,14 +13,12 @@ extern crate panic_halt; // you can put a breakpoint on `rust_begin_unwind` to c
 
 extern crate nrf52840_hal;
 
-use core::ops::Deref;
 use core::cell::RefCell;
-use core::cell::Ref;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
 use cortex_m::Peripherals as CorePeripherals;
 // use cortex_m::register::primask;
 use cortex_m::asm;
-use cortex_m::interrupt::{self as cm_interrupt, Mutex, CriticalSection};
+use cortex_m::interrupt::{self as cm_interrupt, Mutex};
 use cortex_m::peripheral::NVIC;
 use cortex_m_rt::entry;
 use serde::Serialize;
@@ -42,6 +40,7 @@ use nrf52840_hal::gpio::{
 use embedded_hal::digital::v2::OutputPin;
 
 use crate::util::get_from_mutex;
+use crate::gpiote::{to_channels, ConfigIn, ChanUninit};
 
 #[derive(Serialize)]
 struct MonitorPack {
@@ -228,7 +227,10 @@ fn main() -> ! {
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     // start_timer0(&timer0);
 
-    // config_button(pers.GPIOTE);
+    let gpio_chans = to_channels(pers.GPIOTE);
+    let button = gpio_chans[0].into_input(ConfigIn {
+        port: 0, pin: 13, handler: || { toggle_atomic(&COUNTER); }
+    });
 
     cm_interrupt::free(move |cs| {
         EV_TIMER0.borrow(&cs).replace(Some(timer0));
