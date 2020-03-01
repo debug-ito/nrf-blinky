@@ -38,6 +38,9 @@ UARTの受信をやるにはinterruptの処理とバッファリングをやる�
 `serde_cbor`使えるかどうか調べるか？
 
 
+`serde_cbor` crateのドキュメントを読むと、`no_std`をサポートしているとのこと。
+default featureをfalseにしないといけないらしい。
+
 
 # 2020-02-29
 

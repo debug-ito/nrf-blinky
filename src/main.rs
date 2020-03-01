@@ -19,6 +19,9 @@ use cortex_m::asm;
 use cortex_m::interrupt::{self as cm_interrupt, Mutex, CriticalSection};
 use cortex_m::peripheral::NVIC;
 use cortex_m_rt::entry;
+use serde::Serialize;
+use serde_cbor::error::Error as CBORError;
+use serde_cbor::ser::{SliceWrite, Serializer};
 
 // use nrf52840_pac::interrupt; // for [interrupt] attribute?
 
@@ -34,6 +37,10 @@ use nrf52840_hal::gpio::{
 };
 use embedded_hal::digital::v2::OutputPin;
 
+#[derive(Serialize)]
+struct MonitorPack {
+    counter: u8,
+}
 
 static EV_TIMER0: Mutex<RefCell<Option<TIMER0_t>>> = Mutex::new(RefCell::new(None));
 static COUNTER: AtomicU8 = AtomicU8::new(0);
@@ -233,11 +240,16 @@ fn write_uart(uart: &UART0_t, data: &[u8]) {
     uart.tasks_starttx.write(|w| w.tasks_starttx().set_bit());
     for datum in data {
         uart.txd.write(|w| unsafe { return w.txd().bits(*datum); });
-        while !uart.events_txdrdy.read().events_txdrdy().bit_is_set() {
-            ;
-        }
+        while !uart.events_txdrdy.read().events_txdrdy().bit_is_set() { }
     }
     uart.tasks_stoptx.write(|w| w.tasks_stoptx().set_bit());
+}
+
+fn write_monitor_cbor(pack: &MonitorPack, buf: &mut [u8]) -> Result<usize, CBORError> {
+    let write = SliceWrite::new(buf);
+    let mut ser = Serializer::new(write);
+    pack.serialize(&mut ser)?;
+    return Ok(ser.into_inner().bytes_written());
 }
 
 #[entry]
