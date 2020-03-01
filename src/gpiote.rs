@@ -1,5 +1,8 @@
 //! GPIOTE device
 
+use core::cell::RefCell;
+use cortex_m::interrupt::Mutex;
+
 use nrf52840_hal::target::{
     GPIOTE as GPIOTE_t,
 };
@@ -19,19 +22,24 @@ struct ChanOut {
     pin: u8
 }
 
-fn to_channels(dev: GPIOTE_t) -> [ChanUninit; 8] {
-    // TODO
-}
+const CHAN_NUM: usize = 8;
+type InputHandler = fn() -> ();
+static DEVICE: Mutex<RefCell<Option<GPIOTE_t>>> = Mutex::new(RefCell::new(None));
+static HANDLER: [Mutex<RefCell<Option<InputHandler>>>; CHAN_NUM] = [Mutex::new(RefCell::new(None)); CHAN_NUM];
 
-// user-level interrupt handlerをどうやってinterrupt handlerから叩くか？結構めんどくさいんだよな。
+// Copy traitを実装していないとこのやり方の配列初期化ができない？
 
 
-impl ChanUninit {
-    fn config_input(self) -> ChanIn {
-        // TODO
-    }
+// fn to_channels(dev: GPIOTE_t) -> [ChanUninit; 8] {
+//     // TODO
+// }
 
-    fn config_output(self) -> ChanOut {
-        // TODO
-    }
-}
+// impl ChanUninit {
+//     fn config_input(self) -> ChanIn {
+//         // TODO
+//     }
+// 
+//     fn config_output(self) -> ChanOut {
+//         // TODO
+//     }
+// }
