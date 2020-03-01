@@ -33,14 +33,9 @@ use nrf52840_hal::target::{
     GPIOTE as GPIOTE_t,
     UART0 as UART0_t
 };
-use nrf52840_hal::gpio::{
-    GpioExt, OpenDrainConfig::*, Level::*,
-    p0::P0_07, Output, OpenDrain
-};
-use embedded_hal::digital::v2::OutputPin;
 
 use crate::util::get_from_mutex;
-use crate::gpiote::{to_channels, ConfigIn};
+use crate::gpiote::{to_channels, ConfigIn, ConfigOut};
 
 #[derive(Serialize)]
 struct MonitorPack {
@@ -58,21 +53,21 @@ fn delay(count: u16) {
     }
 }
 
-fn assert_blink<T>(assertion: bool, led: &mut T) -> !
-    where T: OutputPin,
-          T::Error: core::fmt::Debug
-{
-    const DELAY: u16 = 20000;
-
-    loop {
-        led.set_high().unwrap();
-        delay(DELAY);
-        if !assertion {
-            led.set_low().unwrap();
-        }
-        delay(DELAY * 3);
-    }
-}
+//// fn assert_blink<T>(assertion: bool, led: &mut T) -> !
+////     where T: OutputPin,
+////           T::Error: core::fmt::Debug
+//// {
+////     const DELAY: u16 = 20000;
+//// 
+////     loop {
+////         led.set_high().unwrap();
+////         delay(DELAY);
+////         if !assertion {
+////             led.set_low().unwrap();
+////         }
+////         delay(DELAY * 3);
+////     }
+//// }
 
 fn config_timer0(timer: &TIMER0_t, nvic: &mut NVIC, period_usec: u32) {
     timer.mode.write(|w| w.mode().timer());
@@ -213,11 +208,7 @@ fn write_monitor_cbor(pack: &MonitorPack, buf: &mut [u8]) -> Result<usize, CBORE
 fn main() -> ! {
     let mut cpers = CorePeripherals::take().unwrap();
     let pers = Peripherals::take().unwrap();
-    let p0 = pers.P0.split();
     let timer0 = pers.TIMER0;
-    let mut led = p0.p0_07.into_open_drain_output(Disconnect0Standard1, Low);
-    led.set_low().unwrap();
-    // let mut prev_counter = 0;
 
     // assert_blink(primask::read().is_active(), &mut led);
     // assert_blink(read_vtor(&cpers) == 0, &mut led);
@@ -228,8 +219,11 @@ fn main() -> ! {
     // start_timer0(&timer0);
 
     let gpio_chans = to_channels(pers.GPIOTE);
-    let button = gpio_chans.chan0.into_input(ConfigIn {
+    let _ = gpio_chans.chan0.into_input(ConfigIn {
         port: 0, pin: 13, handler: || { toggle_atomic(&COUNTER); }
+    });
+    let mut led = gpio_chans.chan1.into_output(ConfigOut {
+        port: 0, pin: 7,
     });
 
     cm_interrupt::free(move |cs| {
@@ -249,9 +243,9 @@ fn main() -> ! {
         asm::wfi();
         
         if COUNTER.load(Relaxed) == 0 {
-            led.set_low().unwrap();
+            led.to_low();
         } else {
-            led.set_high().unwrap();
+            led.to_high();
         }
         
         // led.set_high().unwrap();
