@@ -12,6 +12,16 @@ use nrf52840_hal::target::{
 
 use crate::util::get_from_mutex;
 
+pub struct Channels {
+    pub chan0: ChanUninit,
+    pub chan1: ChanUninit,
+    pub chan2: ChanUninit,
+    pub chan3: ChanUninit,
+    pub chan4: ChanUninit,
+    pub chan5: ChanUninit,
+    pub chan6: ChanUninit,
+    pub chan7: ChanUninit,
+}
 
 pub struct ChanUninit {
     chan: usize,
@@ -51,22 +61,21 @@ static HANDLER: [Mutex<RefCell<Option<InputHandler>>>; CHAN_NUM] =
     ];
 
 
-pub fn to_channels(dev: GPIOTE_t) -> [ChanUninit; 8] {
+pub fn to_channels(dev: GPIOTE_t) -> Channels {
     cinterrupt::free(|cs| {
         DEVICE.borrow(&cs).replace(Some(dev));
     });
-    return [
-        ChanUninit { chan: 0 },
-        ChanUninit { chan: 1 },
-        ChanUninit { chan: 2 },
-        ChanUninit { chan: 3 },
-        ChanUninit { chan: 4 },
-        ChanUninit { chan: 5 },
-        ChanUninit { chan: 6 },
-        ChanUninit { chan: 7 },
-    ];
+    return Channels {
+        chan0: ChanUninit { chan: 0 },
+        chan1: ChanUninit { chan: 1 },
+        chan2: ChanUninit { chan: 2 },
+        chan3: ChanUninit { chan: 3 },
+        chan4: ChanUninit { chan: 4 },
+        chan5: ChanUninit { chan: 5 },
+        chan6: ChanUninit { chan: 6 },
+        chan7: ChanUninit { chan: 7 },
+    };
 }
-
 
 #[interrupt]
 fn GPIOTE() {

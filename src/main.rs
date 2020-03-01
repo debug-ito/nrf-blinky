@@ -40,7 +40,7 @@ use nrf52840_hal::gpio::{
 use embedded_hal::digital::v2::OutputPin;
 
 use crate::util::get_from_mutex;
-use crate::gpiote::{to_channels, ConfigIn, ChanUninit};
+use crate::gpiote::{to_channels, ConfigIn};
 
 #[derive(Serialize)]
 struct MonitorPack {
@@ -228,7 +228,7 @@ fn main() -> ! {
     // start_timer0(&timer0);
 
     let gpio_chans = to_channels(pers.GPIOTE);
-    let button = gpio_chans[0].into_input(ConfigIn {
+    let button = gpio_chans.chan0.into_input(ConfigIn {
         port: 0, pin: 13, handler: || { toggle_atomic(&COUNTER); }
     });
 
