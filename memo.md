@@ -1,4 +1,14 @@
 
+# 2020-03-01
+
+API設計について考察。
+
+HALにならうのがいい気がする。
+singleton moduleでデバイスオブジェクトをconsumeして、引き換えにagent objectを返す。
+そうすればデバイスオブジェクトがstatic Mutex内に入っていることをruntimeで保証できる。
+
+
+
 # 2020-02-29
 
 GPIOTEモジュールを読んでみた。

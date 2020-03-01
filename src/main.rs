@@ -14,7 +14,7 @@ use core::cell::RefCell;
 use core::cell::Ref;
 use core::sync::atomic::{AtomicU8, Ordering::Relaxed};
 use cortex_m::Peripherals as CorePeripherals;
-use cortex_m::register::primask;
+// use cortex_m::register::primask;
 use cortex_m::asm;
 use cortex_m::interrupt::{self as cm_interrupt, Mutex, CriticalSection};
 use cortex_m::peripheral::NVIC;
@@ -23,7 +23,9 @@ use cortex_m_rt::entry;
 // use nrf52840_pac::interrupt; // for [interrupt] attribute?
 
 use nrf52840_hal::target::{
-    interrupt, Peripherals, TIMER0 as TIMER0_t
+    interrupt, Interrupt,
+    Peripherals, TIMER0 as TIMER0_t,
+    GPIOTE as GPIOTE_t
 };
 use nrf52840_hal::gpio::{
     GpioExt, OpenDrainConfig::*, Level::*,
@@ -35,6 +37,7 @@ use embedded_hal::digital::v2::OutputPin;
 static EV_TIMER0: Mutex<RefCell<Option<TIMER0_t>>> = Mutex::new(RefCell::new(None));
 static COUNTER: AtomicU8 = AtomicU8::new(0);
 // static LED_PIN: Mutex<RefCell<Option<P0_07<Output<OpenDrain>>>>> = Mutex::new(RefCell::new(None));
+static DEV_GPIOTE: Mutex<RefCell<Option<GPIOTE_t>>> = Mutex::new(RefCell::new(None));
 
 fn delay(count: u16) {
     for _ in 0 .. count {
@@ -69,7 +72,7 @@ fn config_timer0(timer: &TIMER0_t, nvic: &mut NVIC, period_usec: u32) {
     timer.intenset.write(|w| w.compare0().set_bit());
     timer.events_compare[0].write(|w| w.events_compare().clear_bit());
 
-    const INT: nrf52840_hal::target::Interrupt = nrf52840_hal::target::Interrupt::TIMER0;
+    const INT: Interrupt = Interrupt::TIMER0;
     // nvic.enable(nrf52840_hal::target::Interrupt::TIMER0);
     unsafe {
         nvic.set_priority(INT, 1);
@@ -92,6 +95,16 @@ fn wait_timer0(timer: &TIMER0_t) {
     }
 }
 
+fn toggle_atomic(a: &AtomicU8) {
+    let new_val =
+        if a.load(Relaxed) == 0 {
+            1
+        } else {
+            0
+        };
+    a.store(new_val, Relaxed);
+}
+
 #[interrupt]
 fn TIMER0() {
     asm::nop();
@@ -100,14 +113,8 @@ fn TIMER0() {
         if let Some(timer0) = get_from_mutex(&EV_TIMER0, &cs) {
             let ev = &timer0.events_compare[0]; 
             if ev.read().events_compare().bit_is_set() {
-                let new_val =
-                    if COUNTER.load(Relaxed) == 0 {
-                        1
-                    } else {
-                        0
-                    };
-                COUNTER.store(new_val, Relaxed);
                 ev.write(|w| w.events_compare().clear_bit());
+                toggle_atomic(&COUNTER);
             }
         }
         // if let Some(ref mut led) = LED_PIN.borrow(&cs).borrow_mut().as_mut() {
@@ -162,6 +169,39 @@ fn get_from_mutex<'a, T>(m: &'a Mutex<RefCell<Option<T>>>, cs: &'a CriticalSecti
     };
 }
 
+fn config_button(dev: GPIOTE_t) {
+    const BUTTON_PORT_IS_ONE: bool = false;
+    const BUTTON_PIN: u8 = 13;
+    dev.config[0].write(|w| {
+        unsafe {
+            return w.mode().event()
+                .port().bit(BUTTON_PORT_IS_ONE)
+                .psel().bits(BUTTON_PIN)
+                .polarity().hi_to_lo();
+        }
+    });
+    cm_interrupt::free(|cs| {
+        dev.intenset.write(|w| {
+            w.in0().set()
+        });
+        DEV_GPIOTE.borrow(&cs).replace(Some(dev));
+        unsafe { NVIC::unmask(Interrupt::GPIOTE); }
+    });
+}
+
+#[interrupt]
+fn GPIOTE() {
+    cm_interrupt::free(|cs| {
+        if let Some(dev) = get_from_mutex(&DEV_GPIOTE, &cs) {
+            let ev = &dev.events_in[0];
+            if ev.read().events_in().bit_is_set() {
+                ev.write(|w| w.events_in().clear_bit());
+                toggle_atomic(&COUNTER);
+            }
+        }
+    });
+}
+
 #[entry]
 fn main() -> ! {
     let mut cpers = CorePeripherals::take().unwrap();
@@ -178,7 +218,9 @@ fn main() -> ! {
     write_vtor(&cpers, get_vector_address());
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
-    start_timer0(&timer0);
+    // start_timer0(&timer0);
+
+    config_button(pers.GPIOTE);
 
     cm_interrupt::free(move |cs| {
         EV_TIMER0.borrow(&cs).replace(Some(timer0));
