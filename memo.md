@@ -41,6 +41,12 @@ UARTの受信をやるにはinterruptの処理とバッファリングをやる�
 `serde_cbor` crateのドキュメントを読むと、`no_std`をサポートしているとのこと。
 default featureをfalseにしないといけないらしい。
 
+さて、出力したCBORをどう検証しようか？
+Haskellのcbor-toolパッケージは簡単なinspection toolになっているようだ。
+ファイルを入力して、JSONに変換出力できるらしい。
+CBORドキュメントを単純に連結していると順次デコードして変換出力してくれるみたい。
+
+
 
 # 2020-02-29
 
