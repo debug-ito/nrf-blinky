@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
+#![allow(dead_code)]
 
+mod util;
 mod gpiote;
 
 // pick a panicking behavior
@@ -38,6 +40,8 @@ use nrf52840_hal::gpio::{
     p0::P0_07, Output, OpenDrain
 };
 use embedded_hal::digital::v2::OutputPin;
+
+use crate::util::get_from_mutex;
 
 #[derive(Serialize)]
 struct MonitorPack {
@@ -164,54 +168,6 @@ fn get_vector_address() -> u32 {
     }
 }
 
-fn takeout<T>(o: &Option<T>) -> &T {
-    match o {
-        Some(t) => return t,
-        None => panic!("This is not expected."),
-    }
-}
-
-fn get_from_mutex<'a, T>(m: &'a Mutex<RefCell<Option<T>>>, cs: &'a CriticalSection) -> Option<Ref<'a, T>> {
-    let r = m.borrow(cs).borrow();
-    match r.deref() {
-        Some(_) => return Some(Ref::map(r, takeout)),
-        None => return None,
-    };
-}
-
-fn config_button(dev: GPIOTE_t) {
-    const BUTTON_PORT_IS_ONE: bool = false;
-    const BUTTON_PIN: u8 = 13;
-    dev.config[0].write(|w| {
-        unsafe {
-            return w.mode().event()
-                .port().bit(BUTTON_PORT_IS_ONE)
-                .psel().bits(BUTTON_PIN)
-                .polarity().hi_to_lo();
-        }
-    });
-    cm_interrupt::free(|cs| {
-        dev.intenset.write(|w| {
-            w.in0().set()
-        });
-        DEV_GPIOTE.borrow(&cs).replace(Some(dev));
-        unsafe { NVIC::unmask(Interrupt::GPIOTE); }
-    });
-}
-
-#[interrupt]
-fn GPIOTE() {
-    cm_interrupt::free(|cs| {
-        if let Some(dev) = get_from_mutex(&DEV_GPIOTE, &cs) {
-            let ev = &dev.events_in[0];
-            if ev.read().events_in().bit_is_set() {
-                ev.write(|w| w.events_in().clear_bit());
-                toggle_atomic(&COUNTER);
-            }
-        }
-    });
-}
-
 fn config_uart(uart: &UART0_t) {
     uart.config.write(|w| {
         return w.hwfc().disabled()
@@ -272,7 +228,7 @@ fn main() -> ! {
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     // start_timer0(&timer0);
 
-    config_button(pers.GPIOTE);
+    // config_button(pers.GPIOTE);
 
     cm_interrupt::free(move |cs| {
         EV_TIMER0.borrow(&cs).replace(Some(timer0));
