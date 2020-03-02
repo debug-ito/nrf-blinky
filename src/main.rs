@@ -5,6 +5,7 @@
 mod util;
 mod gpiote;
 mod timer;
+mod cmutex;
 
 // pick a panicking behavior
 extern crate panic_halt; // you can put a breakpoint on `rust_begin_unwind` to catch panics

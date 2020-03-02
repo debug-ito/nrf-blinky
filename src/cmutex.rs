@@ -1,5 +1,6 @@
 //! Cortex-M Mutex wrapper for sharing mutable data between interrupt and normal contexts.
 
+use core::ops::Deref;
 use core::cell::{RefCell, Ref, RefMut};
 use cortex_m::interrupt::{Mutex, CriticalSection};
 
@@ -14,14 +15,12 @@ impl<T> CMutex<T> {
         return self.0.borrow(cs).replace(Some(new_item));
     }
 
-    // pub fn borrow<'a>(&'a self, cs: &'a CriticalSection) -> Option<&'a T> {
-    pub fn borrow<'a>(&'a self, cs: &'a CriticalSection) -> Ref<'a, Option<T>> {
-        return self.0.borrow(cs).borrow();
-
-        // self.0.borrow(cs) : &'cs RefCell<Option<T>>
-        // self.0.borrow(cs).borrow() : Ref<Option<T>>    (Ref : Deref) ... このRefがtemporary objectなのか。
-        // self.0.borrow(cs).borrow().deref() : &Option<T>  ... Refと同じlifetimeなはず。
-        // self.0.borrow(cs).borrow().deref().as_ref() : Option<&T>
+    pub fn borrow<'a>(&'a self, cs: &'a CriticalSection) -> Option<Ref<'a, T>> {
+        let r = self.0.borrow(cs).borrow();
+        match r.deref() {
+            Some(_) => return Some(Ref::map(r, takeout)),
+            None => return None,
+        }
     }
 
     pub fn borrow_mut<'a>(&'a self, cs: &'a CriticalSection) -> RefMut<'a, Option<T>> {
@@ -29,3 +28,9 @@ impl<T> CMutex<T> {
     }
 }
 
+fn takeout<T>(o: &Option<T>) -> &T {
+    match o {
+        Some(t) => return t,
+        None => panic!("This is not expected."),
+    }
+}
