@@ -187,14 +187,18 @@ fn config_uart(uart: &UART0_t) {
     uart.enable.write(|w| w.enable().enabled());
 }
 
-fn write_uart(uart: &UART0_t, data: &[u8]) {
+fn write_uart(uart: &UART0_t, data: &[u8]) -> usize {
+    let mut count = 0;
     uart.events_txdrdy.write(|w| w.events_txdrdy().clear_bit());
     uart.tasks_starttx.write(|w| w.tasks_starttx().set_bit());
     for datum in data {
         uart.txd.write(|w| unsafe { return w.txd().bits(*datum); });
+        uart.events_txdrdy.write(|w| w.events_txdrdy().clear_bit());
         while !uart.events_txdrdy.read().events_txdrdy().bit_is_set() { }
+        count += 1;
     }
     uart.tasks_stoptx.write(|w| w.tasks_stoptx().set_bit());
+    return count;
 }
 
 fn write_monitor_cbor(pack: &MonitorPack, buf: &mut [u8]) -> Result<usize, CBORError> {
@@ -217,7 +221,11 @@ fn main() -> ! {
     
     config_timer0(&timer0, &mut cpers.NVIC, 1_000_000);
     // start_timer0(&timer0);
-
+    cm_interrupt::free(move |cs| {
+        EV_TIMER0.borrow(&cs).replace(Some(timer0));
+        // LED_PIN.borrow(&cs).replace(Some(led));
+    });
+    
     let gpio_chans = Channels::from_device(pers.GPIOTE);
     let _ = gpio_chans.chan0.into_input(ConfigIn {
         port: 0, pin: 13, handler: || { toggle_atomic(&COUNTER); }
@@ -226,11 +234,9 @@ fn main() -> ! {
         port: 0, pin: 7,
     });
 
-    cm_interrupt::free(move |cs| {
-        EV_TIMER0.borrow(&cs).replace(Some(timer0));
-        // LED_PIN.borrow(&cs).replace(Some(led));
-    });
-    
+    let uart = pers.UART0;
+    config_uart(&uart);
+
     // cm_interrupt::free(|cs| {
     //     if let Some(ref mut led) = LED_PIN.borrow(&cs).borrow_mut().as_mut() {
     //         led.set_low().unwrap();
@@ -240,13 +246,19 @@ fn main() -> ! {
     unsafe { cm_interrupt::enable(); }
 
     loop {
-        asm::wfi();
-        
-        if COUNTER.load(Relaxed) == 0 {
-            led.to_low();
-        } else {
-            led.to_high();
+        let msg = "hello, world\n".as_bytes();
+        if write_uart(&uart, msg) >= 12 {
+            led.toggle();
         }
+        delay(60000);
+        
+        // asm::wfi();
+        // 
+        // if COUNTER.load(Relaxed) == 0 {
+        //     led.to_low();
+        // } else {
+        //     led.to_high();
+        // }
         
         // led.set_high().unwrap();
         // wait_timer0(&pers.TIMER0);
